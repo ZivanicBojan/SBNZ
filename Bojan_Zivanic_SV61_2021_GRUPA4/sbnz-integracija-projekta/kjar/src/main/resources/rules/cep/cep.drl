@@ -1,0 +1,62 @@
+package rules.cep;
+
+import com.ftn.sbnz.model.models.News;
+import com.ftn.sbnz.model.models.SpreadEvent;
+import com.ftn.sbnz.model.models.DistributionType;
+
+// Deklaracija kliznog prozora za SpreadEvent događaje
+declare window Last10MinutesEvents
+    SpreadEvent() over window:time(10m)
+end
+
+// Pravilo za normalnu distribuciju - 2-3 događaja u poslednjih 10 minuta
+rule "Normalna distribucija CEP"
+no-loop
+salience 100
+when
+    $n: News($newsId: id)
+    $eventCount: Number(intValue >= 1 && intValue <= 3) from accumulate(
+        SpreadEvent(newsId == $newsId) from window Last10MinutesEvents,
+        count(1)
+    )
+then
+    modify($n) {
+        setDistributionType(DistributionType.NORMAL),
+        setExplanation("Normalna distribucija: " + $eventCount + " događaja u poslednjih 10 minuta")
+    }
+    System.out.println("CEP: Normalna distribucija - vijest " + $newsId + ", broj događaja: " + $eventCount);
+end
+
+rule "Koordinisano sirenje CEP"
+no-loop
+salience 150
+when
+    $n: News($newsId: id)
+    $eventCount: Number(intValue >= 4 && intValue <= 5) from accumulate(
+        SpreadEvent(newsId == $newsId) from window Last10MinutesEvents,
+        count(1)
+    )
+then
+    modify($n) {
+        setDistributionType(DistributionType.COORDINATED),
+        setExplanation("Koordinisanje širenje: " + $eventCount + " događaja u poslednjih 10 minuta")
+    }
+    System.out.println("CEP: Koordinisano sirenje - vijest " + $newsId + ", broj događaja: " + $eventCount);
+end
+
+rule "Eksplozivno sirenje CEP"
+no-loop
+salience 200
+when
+    $n: News($newsId: id)
+    $eventCount: Number(intValue >= 6) from accumulate(
+        SpreadEvent(newsId == $newsId) from window Last10MinutesEvents,
+        count(1)
+    )
+then
+    modify($n) {
+        setDistributionType(DistributionType.EXPLOSIVE),
+        setExplanation("Eksplozivno širenje: " + $eventCount + " događaja u poslednjih 10 minuta")
+    }
+    System.out.println("CEP: Eksplozivno sirenje - vijest " + $newsId + ", broj događaja: " + $eventCount);
+end

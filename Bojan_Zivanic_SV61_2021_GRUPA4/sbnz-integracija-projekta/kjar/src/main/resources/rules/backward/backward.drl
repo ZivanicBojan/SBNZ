@@ -1,1 +1,123 @@
-package backward;
+package rules.backward;
+
+import com.ftn.sbnz.model.models.News;
+import com.ftn.sbnz.model.models.Source;
+import com.ftn.sbnz.model.models.Reputation;
+import com.ftn.sbnz.model.models.Repost;
+import com.ftn.sbnz.model.models.ConfidenceCategory;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REKURZIVNI QUERY - Prati lanac repost vijesti (kao "isContainedIn" u Location primjeru)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Rekurzivni query koji prati lanac Repost činjenica.
+ * Proverava da li je izvor vijesti pouzdan kroz cijeli lanac ponavljanja.
+ * 
+ * BAZNI SLUČAJ: Vijest nema repost - provjeri direktno njen izvor
+ * REKURZIVNI SLUČAJ: Vijest je repost - provjeri izvor i rekurzivno prati originalni post
+ */
+query isSourceTrustedThroughChain( News vijest, Source izvor )
+    // BAZNI SLUČAJ - direktna veza
+    News( this == vijest, source == izvor, source.reputation == Reputation.TRUSTED )
+    or
+    // REKURZIVNI SLUČAJ - prati lanac
+    ( 
+        Repost( repostedNews == vijest, $original : originalNews ) 
+        and 
+        isSourceTrustedThroughChain( $original, izvor; ) 
+    )
+end
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRAVILA KOJA KORISTE REKURZIVNI QUERY (kao u Location primjeru)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+rule "go" salience 10
+when
+    $s : String()
+then
+    System.out.println($s);
+end
+
+rule "Test1 - Konkretna vijest i izvor"
+when
+    String( this == "test1" )
+    $news : News()
+    $source : Source()
+    isSourceTrustedThroughChain( $news, $source; )
+then
+    System.out.println("✓ TEST1: Vijest '" + $news.getTitle() + "' je povezana sa pouzdanim izvorom '" + $source.getName() + "' kroz lanac!");
+end
+
+rule "Test2 - Sve vijesti za dati izvor"
+when
+    String( this == "test2" )
+    $source : Source( reputation == Reputation.TRUSTED )
+    isSourceTrustedThroughChain( vijest, $source; )
+then
+    System.out.println("✓ TEST2: Vijest '" + vijest.getTitle() + "' dolazi od pouzdanog izvora '" + $source.getName() + "'");
+end
+
+rule "Test3 - Pronađi sve pouzdane lance"
+when
+    String( this == "test3" )
+    isSourceTrustedThroughChain( vijest, izvor; )
+then
+    System.out.println("✓ TEST3: Pronađen pouzdan lanac -> Vijest: '" + vijest.getTitle() + "' <- Izvor: '" + izvor.getName() + "'");
+end
+
+rule "Test4 - Prikazi sve repost lance"
+when
+    String( this == "test4" )
+    $r : Repost( $ponovljena : repostedNews, $originalna : originalNews )
+then
+    System.out.println("🔄 TEST4 - REPOST LANAC:");
+    System.out.println("  '" + $ponovljena.getTitle() + "' [" + $ponovljena.getSource().getName() + "]");
+    System.out.println("    ↑ repostovano od");
+    System.out.println("  '" + $originalna.getTitle() + "' [" + $originalna.getSource().getName() + "]");
+end
+
+rule "Test5 - Vijesti bez pouzdanog lanca"
+when
+    String( this == "test5" )
+    $news : News()
+    not isSourceTrustedThroughChain( $news, source; )
+then
+    System.out.println("✗ TEST5: Vijest '" + $news.getTitle() + "' NEMA pouzdan lanac do pouzdanog izvora!");
+end
+
+// Ako originalna vijest u lancu ima oznaku SUMNJIVA ili dolazi iz nepouzdanog izvora,
+// propagiraj sumnju na repostovanu vijest bez obzira na distribuciju.
+rule "Propagate suspicion via Repost chain - original suspicious"
+    no-loop
+    salience 120
+when
+    $r : Repost( $repNews : repostedNews, $origNews : originalNews )
+    $o : News( this == $origNews, confidence == ConfidenceCategory.SUMNJIVA )
+then
+    modify($repNews) {
+        setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA),
+        setExplanation(($repNews.getExplanation() == null ? "" : $repNews.getExplanation()) + 
+                       " Automatska propagacija sumnje iz originala: " + $o.getTitle())
+    }
+                       $repNews.getTitle() + "' <- '" + $o.getTitle() + "'");
+         // propagation logged via existing debug prints elsewhere
+end
+
+rule "Propagate suspicion via Repost chain - original untrusted source"
+    no-loop
+    salience 120
+when
+    $r : Repost( $repNews : repostedNews, $origNews : originalNews )
+    $o : News( this == $origNews, source.reputation != Reputation.TRUSTED )
+then
+    modify($repNews) {
+        setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA),
+        setExplanation(($repNews.getExplanation() == null ? "" : $repNews.getExplanation()) + 
+                       " Automatska propagacija sumnje iz originala (nepouzdan izvor): " + 
+                       $o.getTitle())
+    }
+                       $repNews.getTitle() + "' <- '" + $o.getTitle() + "'");
+         // propagation logged via existing debug prints elsewhere
+end

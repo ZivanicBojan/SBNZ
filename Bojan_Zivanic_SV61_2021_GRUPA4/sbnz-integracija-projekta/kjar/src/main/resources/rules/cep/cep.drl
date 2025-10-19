@@ -60,3 +60,66 @@ then
     }
     System.out.println("CEP: Eksplozivno sirenje - vijest " + $newsId + ", broj događaja: " + $eventCount);
 end
+
+// 4. CEP pravilo - Ponavljajuće širenje (slične vijesti od različitih izvora)
+rule "Ponavljajuce sirenje CEP"
+no-loop
+salience 180
+when
+    $n: News($newsId: id, $title: title)
+    // Pronađi druge vijesti sa sličnim naslovom od različitih izvora
+    $n2: News(id != $newsId, $title2: title, $sourceId2: source.name, eval(areSimilarTitles($title, $title2)))
+    $n3: News(id != $newsId, id != $n2.id, $title3: title, $sourceId3: source.name, 
+              source.name != $sourceId2, eval(areSimilarTitles($title, $title3)))
+    
+    // Proveri da li su se eventi desili u kratkom vremenskom periodu
+    exists SpreadEvent(newsId == $newsId) from window Last10MinutesEvents
+    exists SpreadEvent(newsId == $n2.id) from window Last10MinutesEvents  
+    exists SpreadEvent(newsId == $n3.id) from window Last10MinutesEvents
+then
+    modify($n) {
+        setDistributionType(DistributionType.COORDINATED),
+        setExplanation("Ponavljajuće širenje: Slične vijesti od 3+ različita izvora - koordinisana kampanja")
+    }
+    System.out.println("CEP: Ponavljajuce sirenje - slične vijesti od različitih izvora:");
+    System.out.println("  - '" + $title + "' (" + $n.getSource().getName() + ")");
+    System.out.println("  - '" + $title2 + "' (" + $sourceId2 + ")"); 
+    System.out.println("  - '" + $title3 + "' (" + $sourceId3 + ")");
+end
+
+// Helper funkcija za poređenje sličnosti naslova
+function boolean areSimilarTitles(String title1, String title2) {
+    if (title1 == null || title2 == null) return false;
+    
+    // Konvertuj u lowercase za poređenje
+    String t1 = title1.toLowerCase().trim();
+    String t2 = title2.toLowerCase().trim();
+    
+    // Ako su identični
+    if (t1.equals(t2)) return true;
+    
+    // Ukloni interpunkciju i vrati sve što nije slovo ili broj
+    t1 = t1.replaceAll("[^a-zA-ZšđčćžŠĐČĆŽ0-9\\s]", "");
+    t2 = t2.replaceAll("[^a-zA-ZšđčćžŠĐČĆŽ0-9\\s]", "");
+    
+    // Podeli na reči
+    String[] words1 = t1.split("\\s+");
+    String[] words2 = t2.split("\\s+");
+    
+    // Broji koliko reči se poklapaju
+    int matchingWords = 0;
+    for (String word1 : words1) {
+        if (word1.length() > 2) { // Ignoriši kratke reči (kao što su veznici)
+            for (String word2 : words2) {
+                if (word1.equals(word2)) {
+                    matchingWords++;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Sličnost je ako se poklapa 50%+ značajnih reči
+    int minWords = Math.min(words1.length, words2.length);
+    return minWords > 0 && (matchingWords * 100.0 / minWords) >= 50.0;
+}

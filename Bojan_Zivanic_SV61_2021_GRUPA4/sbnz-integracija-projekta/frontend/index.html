@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBNZ News Analysis System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 SBNZ News Analysis System</h1>
+            <p>Expert System za analizu pouzdanosti vijesti</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-button active" onclick="showTab('forward')">Forward Chaining</button>
+            <button class="tab-button" onclick="showTab('backward')">Backward Chaining</button>
+            <button class="tab-button" onclick="showTab('cep')">CEP Analysis</button>
+            <button class="tab-button" onclick="showTab('manual')">Manual Test</button>
+        </nav>
+
+        <!-- Forward Chaining Tab -->
+        <div id="forward" class="tab-content active">
+            <div class="section">
+                <h2>Forward Chaining - Klasifikacija vijesti</h2>
+                <p>Forward chaining analizira vijesti korak po korak, od činjenica ka zaključcima.</p>
+                
+                <div class="demo-section">
+                    <button onclick="runForwardDemo()" class="demo-btn">🚀 Pokreni Forward Demo</button>
+                    <div id="forward-results" class="results"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backward Chaining Tab -->
+        <div id="backward" class="tab-content">
+            <div class="section">
+                <h2>Backward Chaining - Analiza razloga</h2>
+                <p>Backward chaining radi unazad od ciljeva, objašnjavajući zašto je vijest klasifikovana na određeni način.</p>
+                
+                <div class="demo-section">
+                    <button onclick="runBackwardDemo()" class="demo-btn">🔍 Pokreni Backward Demo</button>
+                    <div id="backward-results" class="results"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CEP Tab -->
+        <div id="cep" class="tab-content">
+            <div class="section">
+                <h2>CEP - Complex Event Processing</h2>
+                <p>Analiziraj patterns širenja vijesti kroz Complex Event Processing.</p>
+                
+                <div class="demo-section">
+                    <button onclick="runCEPDemo()" class="demo-btn">📊 Pokreni CEP Demo</button>
+                    <button onclick="runCoordinatedDemo()" class="demo-btn">🕸️ Koordinisano širenje</button>
+                    <div id="cep-results" class="results"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Test Tab -->
+        <div id="manual" class="tab-content">
+            <div class="section">
+                <h2>Manuelno testiranje</h2>
+                <p>Kreirajte vlastite vijesti za testiranje sistema.</p>
+                
+                <form id="manual-form" class="manual-form">
+                    <div class="form-group">
+                        <label for="news-title">Naslov vijesti:</label>
+                        <input type="text" id="news-title" placeholder="Unesite naslov vijesti..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="news-content">Sadržaj (opcionalno):</label>
+                        <textarea id="news-content" placeholder="Unesite sadržaj vijesti..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="source-name">Ime izvora:</label>
+                        <input type="text" id="source-name" placeholder="BBC, CNN, FakeNews24..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="source-reputation">Reputacija izvora:</label>
+                        <select id="source-reputation" required>
+                            <option value="TRUSTED">Pouzdan (TRUSTED)</option>
+                            <option value="UNKNOWN">Nepoznat (UNKNOWN)</option>
+                            <option value="UNRELIABLE">Nepouzdan (UNRELIABLE)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="distribution-type">Tip distribucije:</label>
+                        <select id="distribution-type">
+                            <option value="NORMAL">Normalno (NORMAL)</option>
+                            <option value="COORDINATED">Koordinisano (COORDINATED)</option>
+                            <option value="EXPLOSIVE">Eksplozivno (EXPLOSIVE)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-buttons">
+                        <button type="button" onclick="testForwardManual()">Test Forward</button>
+                        <button type="button" onclick="testBackwardManual()">Test Backward</button>
+                    </div>
+                </form>
+                <div id="manual-results" class="results"></div>
+            </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Analyzing news...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

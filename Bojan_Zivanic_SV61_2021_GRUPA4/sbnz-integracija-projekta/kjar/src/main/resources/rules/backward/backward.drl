@@ -47,7 +47,7 @@ when
     $source : Source()
     isSourceTrustedThroughChain( $news, $source; )
 then
-    System.out.println("✓ TEST1: Vijest '" + $news.getTitle() + "' je povezana sa pouzdanim izvorom '" + $source.getName() + "' kroz lanac!");
+    System.out.println(String.format("✓ TEST1: Vijest '%s' je povezana sa pouzdanim izvorom '%s' kroz lanac!", $news.getTitle(), $source.getName()));
 end
 
 rule "Test2 - Sve vijesti za dati izvor"
@@ -56,7 +56,7 @@ when
     $source : Source( reputation == Reputation.TRUSTED )
     isSourceTrustedThroughChain( vijest, $source; )
 then
-    System.out.println("✓ TEST2: Vijest '" + vijest.getTitle() + "' dolazi od pouzdanog izvora '" + $source.getName() + "'");
+    System.out.println(String.format("✓ TEST2: Vijest '%s' dolazi od pouzdanog izvora '%s'", vijest.getTitle(), $source.getName()));
 end
 
 rule "Test3 - Pronađi sve pouzdane lance"
@@ -64,7 +64,7 @@ when
     String( this == "test3" )
     isSourceTrustedThroughChain( vijest, izvor; )
 then
-    System.out.println("✓ TEST3: Pronađen pouzdan lanac -> Vijest: '" + vijest.getTitle() + "' <- Izvor: '" + izvor.getName() + "'");
+    System.out.println(String.format("✓ TEST3: Pronađen pouzdan lanac -> Vijest: '%s' <- Izvor: '%s'", vijest.getTitle(), izvor.getName()));
 end
 
 rule "Test4 - Prikazi sve repost lance"
@@ -73,9 +73,9 @@ when
     $r : Repost( $ponovljena : repostedNews, $originalna : originalNews )
 then
     System.out.println("🔄 TEST4 - REPOST LANAC:");
-    System.out.println("  '" + $ponovljena.getTitle() + "' [" + $ponovljena.getSource().getName() + "]");
+    System.out.println(String.format("  '%s' [%s]", $ponovljena.getTitle(), $ponovljena.getSource().getName()));
     System.out.println("    ↑ repostovano od");
-    System.out.println("  '" + $originalna.getTitle() + "' [" + $originalna.getSource().getName() + "]");
+    System.out.println(String.format("  '%s' [%s]", $originalna.getTitle(), $originalna.getSource().getName()));
 end
 
 rule "Test5 - Vijesti bez pouzdanog lanca"
@@ -84,7 +84,7 @@ when
     $news : News()
     not isSourceTrustedThroughChain( $news, source; )
 then
-    System.out.println("✗ TEST5: Vijest '" + $news.getTitle() + "' NEMA pouzdan lanac do pouzdanog izvora!");
+    System.out.println(String.format("✗ TEST5: Vijest '%s' NEMA pouzdan lanac do pouzdanog izvora!", $news.getTitle()));
 end
 
 // Ako originalna vijest u lancu ima oznaku SUMNJIVA ili dolazi iz nepouzdanog izvora,
@@ -98,11 +98,8 @@ when
 then
     modify($repNews) {
         setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA),
-        setExplanation(($repNews.getExplanation() == null ? "" : $repNews.getExplanation()) + 
-                       " Automatska propagacija sumnje iz originala: " + $o.getTitle())
+    setExplanation(String.format("%s Automatska propagacija sumnje iz originala: %s", ($repNews.getExplanation() == null ? "" : $repNews.getExplanation()), $o.getTitle()))
     }
-                       $repNews.getTitle() + "' <- '" + $o.getTitle() + "'");
-         // propagation logged via existing debug prints elsewhere
 end
 
 rule "Propagate suspicion via Repost chain - original untrusted source"
@@ -114,10 +111,27 @@ when
 then
     modify($repNews) {
         setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA),
-        setExplanation(($repNews.getExplanation() == null ? "" : $repNews.getExplanation()) + 
-                       " Automatska propagacija sumnje iz originala (nepouzdan izvor): " + 
-                       $o.getTitle())
+    setExplanation(String.format("%s Automatska propagacija sumnje iz originala (nepouzdan izvor): %s", ($repNews.getExplanation() == null ? "" : $repNews.getExplanation()), $o.getTitle()))
     }
-                       $repNews.getTitle() + "' <- '" + $o.getTitle() + "'");
-         // propagation logged via existing debug prints elsewhere
+                       
+end
+
+// Ako je originalna vijest u repost lancu pronađena kao TRUSTED kroz lanac, propagiraj povjerenje na repostovanu vijest.
+// Pravilo se eksplicitno poziva preko trigger stringa 'testPropagateTrust'
+rule "TestPropagateTrust - Propagate trust via Repost chain - original trusted"
+    no-loop
+    salience 130
+when
+    String( this == "testPropagateTrust" )
+    $r : Repost( $repNews : repostedNews, $origNews : originalNews )
+    $o : News( this == $origNews )
+    isSourceTrustedThroughChain( $o, $trustedSource; )
+    eval($trustedSource.getReputation() == Reputation.TRUSTED)
+then
+    modify($repNews) {
+        setConfidence(ConfidenceCategory.POUZDANA),
+        setExplanation((($repNews.getExplanation() == null || $repNews.getExplanation().isEmpty()) ? "" : $repNews.getExplanation() + " ") +
+            "Povjerenje automatski propagirano iz originalne vijesti: '" + $o.getTitle() + "' sa pouzdanim izvorom: '" + $trustedSource.getName() + "'.")
+    }
+    System.out.println("✓ Povjerenje propagirano: '" + $repNews.getTitle() + "' <- '" + $o.getTitle() + "' [" + $trustedSource.getName() + "]");
 end

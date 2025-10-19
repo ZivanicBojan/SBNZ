@@ -404,6 +404,7 @@ public class BackwardChainingService {
             kieSession.insert("test3"); // Prikazuje sve repost lance
             kieSession.insert("test4"); // Kombinuje rekurzivni query sa drugim uslovima
             kieSession.insert("test5"); // Pronalazi vijesti bez pouzdanog lanca
+            // kieSession.insert("testPropagateTrust"); // Eksplicitno poziva pravilo za propagaciju povjerenja
             
             // Standardna analiza
             kieSession.insert("analizirajPouzdanost");
@@ -474,6 +475,23 @@ public class BackwardChainingService {
                         }
                     }
                     if (originalTrustedNews != null) break;
+                }
+            }
+            // Ako je pronađen trusted original, postavi confidence i explanation za inputNews
+            if (inputNews != null && originalTrustedNews != null) {
+                boolean sameTitle = inputNews.getTitle() != null && originalTrustedNews.getTitle() != null && inputNews.getTitle().equalsIgnoreCase(originalTrustedNews.getTitle());
+                boolean sameSource = inputNews.getSource() != null && originalTrustedNews.getSource() != null && inputNews.getSource().getName().equalsIgnoreCase(originalTrustedNews.getSource().getName());
+                if (sameTitle && sameSource) {
+                    log.info("[PROPAGATE] Input news and original trusted news have the same title and source. Skipping trust propagation.");
+                } else {
+                    log.info("inputNews == originalTrustedNews? {}", inputNews == originalTrustedNews);
+                    log.info("inputNews.id={}, originalTrustedNews.id={}", inputNews.getId(), originalTrustedNews.getId());
+                    inputNews.setConfidence(ConfidenceCategory.POUZDANA);
+                    inputNews.setExplanation(
+                        "Povjerenje automatski propagirano iz originalne vijesti: '" +
+                        originalTrustedNews.getTitle() + "' sa pouzdanim izvorom: '" +
+                        originalTrustedNews.getSource().getName() + "'."
+                    );
                 }
             }
             result.put("inputNews", inputNews);

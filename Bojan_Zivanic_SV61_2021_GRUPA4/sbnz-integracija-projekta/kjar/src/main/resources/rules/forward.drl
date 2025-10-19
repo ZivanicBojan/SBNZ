@@ -1,0 +1,173 @@
+package rules;
+
+import com.ftn.sbnz.model.models.News;
+import com.ftn.sbnz.model.models.Source;
+import com.ftn.sbnz.model.models.Reputation;
+import com.ftn.sbnz.model.models.ConfidenceCategory;
+import com.ftn.sbnz.model.models.DistributionType;
+
+// Nivo 1 – Reputacija izvora
+rule "Nivo 1 - Visoka reputacija izvora"
+    no-loop
+    salience 100
+when
+    $n: News(source.reputation == Reputation.TRUSTED, confidence == null)
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.POUZDANA);
+    }
+    modify($n) {
+        setExplanation("Izvor je pouzdan.");
+    }
+    System.out.println("Nivo 1 - Visoka reputacija: " + $n.getTitle());
+end
+
+rule "Nivo 1 - Niska reputacija izvora"
+    no-loop
+    salience 100
+when
+    $n: News(source.reputation != Reputation.TRUSTED, confidence == null)
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA);
+    }
+    modify($n) {
+        setExplanation("Izvor je nepouzdan ili nepoznat.");
+    }
+    System.out.println("Nivo 1 - Niska reputacija: " + $n.getTitle());
+end
+
+// Nivo 2 – Analiza sadržaja
+rule "Nivo 2 - Pouzdan izvor BEZ senzacionalizma"
+    no-loop
+    salience 90
+when
+    $n: News(confidence == ConfidenceCategory.POUZDANA, $title: title != null, eval(!isSensational($title)))
+then
+    modify($n) {
+        setExplanation($n.getExplanation() + " Sadržaj nema senzacionalizam.");
+    }
+    System.out.println("Nivo 2 - Pouzdan BEZ senzacionalizma: " + $n.getTitle());
+end
+
+rule "Nivo 2 - Pouzdan izvor SA senzacionalizmom"
+    no-loop
+    salience 90
+when
+    $n: News(confidence == ConfidenceCategory.POUZDANA, $title: title != null, eval(isSensational($title)))
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.POTENCIJALNO_LAZNA);
+    }
+    modify($n) {
+        setExplanation($n.getExplanation() + " Sadržaj sadrži senzacionalizam.");
+    }
+    System.out.println("Nivo 2 - Pouzdan SA senzacionalizmom: " + $n.getTitle());
+end
+
+rule "Nivo 2 - Nepouzdan izvor BEZ senzacionalizma"
+    no-loop
+    salience 90
+when
+    $n: News(confidence == ConfidenceCategory.POTENCIJALNO_LAZNA, $title: title != null, eval(!isSensational($title)))
+then
+    modify($n) {
+        setExplanation($n.getExplanation() + " Sadržaj nema senzacionalizam.");
+    }
+    System.out.println("Nivo 2 - Nepouzdan BEZ senzacionalizma: " + $n.getTitle());
+end
+
+rule "Nivo 2 - Nepouzdan izvor SA senzacionalizmom"
+    no-loop
+    salience 90
+when
+    $n: News(confidence == ConfidenceCategory.POTENCIJALNO_LAZNA, $title: title != null, eval(isSensational($title)))
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.SUMNJIVA);
+    }
+    modify($n) {
+        setExplanation($n.getExplanation() + " Sadržaj sadrži senzacionalizam.");
+    }
+    System.out.println("Nivo 2 - Nepouzdan SA senzacionalizmom: " + $n.getTitle());
+end
+
+// Nivo 3 – CEP logika (forward drži logiku modifikacije na osnovu DistributionType)
+rule "Nivo 3 - Normalna distribucija"
+    no-loop
+    salience 80
+when
+    $n: News(confidence == ConfidenceCategory.POUZDANA, distributionType == DistributionType.NORMAL)
+then
+    modify($n) {
+        setExplanation($n.getExplanation() + " Normalna distribucija širenja potvrđuje pouzdanost.");
+    }
+    System.out.println("Nivo 3 - Normalna distribucija: " + $n.getTitle());
+end
+
+rule "Nivo 3 - Koordinisano širenje"
+    no-loop
+    salience 80
+when
+    $n: News((confidence == ConfidenceCategory.POUZDANA || confidence == ConfidenceCategory.POTENCIJALNO_LAZNA),
+             distributionType == DistributionType.COORDINATED)
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.SUMNJIVA);
+    }
+    modify($n) {
+        setExplanation($n.getExplanation() + " Detektovano koordinisano širenje.");
+    }
+    System.out.println("Nivo 3 - Koordinisano širenje: " + $n.getTitle());
+end
+
+rule "Nivo 3 - Eksplozivno širenje"
+    no-loop
+    salience 80
+when
+    $n: News((confidence == ConfidenceCategory.POUZDANA || confidence == ConfidenceCategory.POTENCIJALNO_LAZNA),
+             distributionType == DistributionType.EXPLOSIVE)
+then
+    modify($n) {
+        setConfidence(ConfidenceCategory.SUMNJIVA);
+    }
+    modify($n) {
+        setExplanation($n.getExplanation() + " Detektovano eksplozivno širenje.");
+    }
+    System.out.println("Nivo 3 - Eksplozivno širenje: " + $n.getTitle());
+end
+
+
+rule "Nivo 3 - Normalna distribucija za potencijalno lažnu"
+    no-loop
+    salience 80
+when
+    $n: News(confidence == ConfidenceCategory.POTENCIJALNO_LAZNA, distributionType == DistributionType.NORMAL)
+then
+    modify($n) {
+        setExplanation($n.getExplanation() + " Normalna distribucija širenja potvrđuje preliminarno potencijalno lažnu vijest.");
+    }
+    System.out.println("Nivo 3 - Normalna distribucija (potencijalno lažna): " + $n.getTitle());
+end
+
+rule "Nivo 3 - Sumnjiva vijest nezavisno od distribucije"
+    no-loop
+    salience 80
+when
+    $n: News(confidence == ConfidenceCategory.SUMNJIVA, distributionType != null)
+then
+    modify($n) {
+        setExplanation($n.getExplanation() + " Vijest je preliminarno sumnjiva; finalna ocjena ostaje sumnjiva.");
+    }
+    System.out.println("Nivo 3 - Preliminarno sumnjiva vijest: " + $n.getTitle());
+end
+
+
+// Helper funkcija
+function boolean isSensational(String title) {
+    return title != null && (title.toUpperCase().contains("ŠOK") || 
+           title.toUpperCase().contains("SENZACIJA") ||
+           title.toUpperCase().contains("EKSKLUZIVNO") ||
+           title.contains("!!!") ||
+           title.toUpperCase().contains("ŠOKANTNO"));
+}

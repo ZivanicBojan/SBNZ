@@ -358,7 +358,6 @@ async function testBackwardManual() {
     // First classify with forward, then analyze with backward
     const resultsDiv = document.getElementById('manual-results');
     showLoading();
-    
     try {
         // Step 1: Forward classification
         const forwardResponse = await fetch(ENDPOINTS.forward.classifySingle, {
@@ -368,10 +367,9 @@ async function testBackwardManual() {
             },
             body: JSON.stringify(news)
         });
-        
         if (!forwardResponse.ok) throw new Error(`Forward error! status: ${forwardResponse.status}`);
         const classifiedNews = await forwardResponse.json();
-        
+
         // Step 2: Backward analysis
         const backwardResponse = await fetch(ENDPOINTS.backward.fullAnalysis, {
             method: 'POST',
@@ -380,29 +378,26 @@ async function testBackwardManual() {
             },
             body: JSON.stringify([classifiedNews])
         });
-        
         if (!backwardResponse.ok) throw new Error(`Backward error! status: ${backwardResponse.status}`);
         const backwardResult = await backwardResponse.json();
-        
+
         let html = '<h3>🔍 Backward Chaining - Manual Test</h3>';
-        html += '<p><strong>Prvo je извршена forward klasifikacija, а затим backward analiza razloga.</strong></p>';
-        
-        // Show the analyzed news
-        if (backwardResult.suspiciousNews && backwardResult.suspiciousNews.length > 0) {
-            html += '<h4 style="color: #e74c3c;">Razlog sumnjivosti:</h4>';
-            backwardResult.suspiciousNews.forEach(news => {
-                html += createNewsCard(news, 'suspicious');
-            });
-        } else if (backwardResult.trustedNews && backwardResult.trustedNews.length > 0) {
-            html += '<h4 style="color: #27ae60;">Razlog pouzdanosti:</h4>';
-            backwardResult.trustedNews.forEach(news => {
-                html += createNewsCard(news, 'trusted');
-            });
-        } else {
-            html += '<h4>Originalna klasifikacija:</h4>';
+        html += '<p><strong>Prvo je izvršena forward klasifikacija, a zatim backward analiza razloga.</strong></p>';
+
+
+
+            // Prikaži samo klasifikovanu vijest
+            html += '<h4 style="color:#2980b9;">Vaša vijest:</h4>';
             html += createNewsCard(classifiedNews, getConfidenceClass(classifiedNews.confidence));
-        }
-        
+
+            // Prikaži originalnu vijest iz lanca (ako postoji u response-u)
+            if (backwardResult.originalTrustedNews) {
+                html += `<div class="news-card trusted" style="background:#eafaf1;border:2px solid #27ae60;margin-top:8px;">
+                    <div class="explanation" style="font-weight:bold;color:#27ae60;">🔗 Originalna vijest iz trusted lanca:</div>
+                    ${createNewsCard(backwardResult.originalTrustedNews, 'trusted')}
+                </div>`;
+            }
+
         resultsDiv.innerHTML = html;
     } catch (error) {
         console.error('Manual Backward Test Error:', error);

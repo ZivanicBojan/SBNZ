@@ -88,23 +88,7 @@ function displayForwardResults(data, container) {
         </div>
     `;
     
-    // Percentages
-    html += `
-        <div class="stats">
-            <div class="stat-card">
-                <h3>${data.trustedPercentage.toFixed(1)}%</h3>
-                <p>Pouzdanost</p>
-            </div>
-            <div class="stat-card">
-                <h3>${data.suspiciousPercentage.toFixed(1)}%</h3>
-                <p>Sumnjivost</p>
-            </div>
-            <div class="stat-card">
-                <h3>${data.potentiallyFakePercentage.toFixed(1)}%</h3>
-                <p>Pot. lažnost</p>
-            </div>
-        </div>
-    `;
+
     
     // News breakdown by category
     html += '<h4>📰 Klasifikacija po kategorijama:</h4>';
@@ -162,59 +146,31 @@ async function runBackwardDemo() {
 function displayBackwardResults(data, container) {
     let html = '<h3>🔍 Backward Chaining Rezultati</h3>';
     html += '<p><strong>Backward chaining analizira RAZLOGE zašto su vijesti klasifikovane na određeni način.</strong></p>';
-    
-    // Statistics
-    html += `
-        <div class="stats">
-            <div class="stat-card">
-                <h3>${data.totalAnalyzed}</h3>
-                <p>Analizirane vijesti</p>
-            </div>
-            <div class="stat-card">
-                <h3>${data.suspiciousNews?.length || 0}</h3>
-                <p>Sumnjive sa objašnjenjem</p>
-            </div>
-            <div class="stat-card">
-                <h3>${data.trustedNews?.length || 0}</h3>
-                <p>Pouzdane sa objašnjenjem</p>
-            </div>
-            <div class="stat-card">
-                <h3>${data.untrustedSources?.length || 0}</h3>
-                <p>Nepouzdani izvori</p>
-            </div>
-        </div>
-    `;
-    
-    // Suspicious news analysis
-    if (data.suspiciousNews && data.suspiciousNews.length > 0) {
-        html += '<h4 style="color: #e74c3c;">🔍 RAZLOZI SUMNJIVOSTI:</h4>';
-        data.suspiciousNews.forEach(news => {
-            html += createNewsCard(news, 'suspicious');
-        });
-    }
-    
-    // Trusted news analysis
+    // Prikaz analiziranih vijesti (trusted/suspicious)
     if (data.trustedNews && data.trustedNews.length > 0) {
-        html += '<h4 style="color: #27ae60;">🔍 RAZLOZI POUZDANOSTI:</h4>';
+        html += '<h4 style="color: #27ae60;">✅ Pouzdane vijesti (razlozi):</h4>';
         data.trustedNews.forEach(news => {
             html += createNewsCard(news, 'trusted');
         });
     }
-    
-    // Untrusted sources
-    if (data.untrustedSources && data.untrustedSources.length > 0) {
-        html += '<h4 style="color: #f39c12;">📰 NEPOUZDANI IZVORI:</h4>';
-        data.untrustedSources.forEach(source => {
-            html += `
-                <div class="news-card">
-                    <h4>🚨 ${source.name}</h4>
-                    <div class="source">Reputacija: ${source.reputation}</div>
-                    <div class="explanation">Backward chaining je identifikovao ovaj izvor kao nepouzdan.</div>
-                </div>
-            `;
+    if (data.suspiciousNews && data.suspiciousNews.length > 0) {
+        html += '<h4 style="color: #e74c3c;">⚠️ Sumnjive vijesti (razlozi):</h4>';
+        data.suspiciousNews.forEach(news => {
+            html += createNewsCard(news, 'suspicious');
         });
     }
-    
+    if (data.potentiallyFakeNews && data.potentiallyFakeNews.length > 0) {
+        html += '<h4 style="color: #f39c12;">⚡ Potencijalno lažne vijesti:</h4>';
+        data.potentiallyFakeNews.forEach(news => {
+            html += createNewsCard(news, 'potentially-fake');
+        });
+    }
+    if (data.unclassifiedNews && data.unclassifiedNews.length > 0) {
+        html += '<h4 style="color: #95a5a6;">❓ Neklasifikovane vijesti:</h4>';
+        data.unclassifiedNews.forEach(news => {
+            html += createNewsCard(news, 'unclassified');
+        });
+    }
     container.innerHTML = html;
 }
 

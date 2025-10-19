@@ -386,9 +386,9 @@ async function testBackwardManual() {
 
 
 
-            // Prikaži samo klasifikovanu vijest
+            // Prikaži samo klasifikovanu vijest (koristi ažuriranu iz backward odgovora)
             html += '<h4 style="color:#2980b9;">Vaša vijest:</h4>';
-            html += createNewsCard(classifiedNews, getConfidenceClass(classifiedNews.confidence));
+            html += createNewsCard(backwardResult.inputNews, getConfidenceClass(backwardResult.inputNews.confidence));
 
             // Prikaži originalnu vijest iz lanca (ako postoji u response-u)
             if (backwardResult.originalTrustedNews) {

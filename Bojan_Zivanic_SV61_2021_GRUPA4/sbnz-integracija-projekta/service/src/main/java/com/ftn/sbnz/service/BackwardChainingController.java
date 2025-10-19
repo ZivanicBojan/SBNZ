@@ -34,7 +34,7 @@ public class BackwardChainingController {
     /**
      * Analizira zašto su vijesti pouzdane
      */
-    @PostMapping("/analyze-trusted")
+    @PostMapping(value = "/analyze-trusted", produces = "application/json; charset=UTF-8")
     public ResponseEntity<List<News>> analyzeTrusted(@RequestBody List<News> newsList) {
         List<News> trusted = backwardChainingService.whyIsTrusted(newsList);
         return ResponseEntity.ok(trusted);
@@ -43,7 +43,7 @@ public class BackwardChainingController {
     /**
      * Pronalazi nepouzdane izvore
      */
-    @PostMapping("/find-untrusted-sources")
+    @PostMapping(value = "/find-untrusted-sources", produces = "application/json; charset=UTF-8")
     public ResponseEntity<List<Source>> findUntrustedSources(@RequestBody List<Source> sources) {
         List<Source> untrusted = backwardChainingService.findUntrustedSources(sources);
         return ResponseEntity.ok(untrusted);
@@ -52,7 +52,7 @@ public class BackwardChainingController {
     /**
      * Kompleksna backward chaining analiza
      */
-    @PostMapping("/full-analysis")
+    @PostMapping(value = "/full-analysis", produces = "application/json; charset=UTF-8")
     public ResponseEntity<Map<String,Object>> performFullAnalysis(@RequestBody List<News> newsList) {
         Map<String,Object> result = backwardChainingService.performBackwardAnalysis(newsList);
         return ResponseEntity.ok(result);
@@ -61,7 +61,7 @@ public class BackwardChainingController {
     /**
      * Test endpoint za frontend - može biti pozvano GET zahtevom
      */
-    @GetMapping("/full-analysis")
+    @GetMapping(value = "/full-analysis", produces = "application/json; charset=UTF-8")
     public ResponseEntity<Map<String,Object>> performFullAnalysisGet() {
         return runDemo(); // Koristi demo podatke
     }
@@ -69,7 +69,7 @@ public class BackwardChainingController {
     /**
      * Test endpoint sa demo podacima
      */
-    @GetMapping("/demo")
+    @GetMapping(value = "/demo", produces = "application/json; charset=UTF-8")
     public ResponseEntity<Map<String,Object>> runDemo() {
         // Kreiraj test podatke
         Source trustedSource = new Source("BBC", Reputation.TRUSTED);
